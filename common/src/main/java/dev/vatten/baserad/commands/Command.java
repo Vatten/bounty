@@ -41,6 +41,6 @@ public abstract class Command {
     }
 
     public String permission() {
-        return "vattenbaserad.command";
+        return "bounty.command";
     }
 }

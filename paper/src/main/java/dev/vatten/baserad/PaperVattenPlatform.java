@@ -22,7 +22,7 @@ import dev.vatten.baserad.events.PlayerLoadInEvent;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.event.player.PlayerClientLoadedWorldEvent;
-import org.bstats.bukkit.Metrics;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -91,6 +91,12 @@ public class PaperVattenPlatform extends JavaPlugin implements VattenPlatform<Pl
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         plugin.getEventHandler().dispatchEvent(new dev.vatten.baserad.events.PlayerJoinEvent(wrapPlayer(event.getPlayer())));
+        for(OfflinePlayer offlinePlayer : getServer().getOfflinePlayers()) {
+            if(((Plugin) plugin).getBountyPlayerByUUID(offlinePlayer.getUniqueId()) == null) {
+                ((Plugin) plugin).PLAYER_STORAGE.getData().getPlayers().add(new BountyPlayer(offlinePlayer.getUniqueId(), offlinePlayer.getName()));
+            }
+            ((Plugin) plugin).PLAYER_STORAGE.save();
+        }
     }
 
     @EventHandler

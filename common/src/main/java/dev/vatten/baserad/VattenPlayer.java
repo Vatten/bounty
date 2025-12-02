@@ -16,6 +16,7 @@
 
 package dev.vatten.baserad;
 
+import de.exlll.configlib.Configuration;
 import lombok.Getter;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.audience.ForwardingAudience;
@@ -24,11 +25,12 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Collections;
 import java.util.UUID;
 
+@Configuration
 public class VattenPlayer implements ForwardingAudience {
     @Getter
-    private final UUID uuid;
+    private UUID uuid;
     @Getter
-    private final String name;
+    private String name;
     private final Audience audience;
 
     VattenPlayer(UUID uuid, String name, Audience audience) {

@@ -1,4 +1,4 @@
-rootProject.name = "baserad"
+rootProject.name = "bounty"
 include("common")
 include("plugin")
 include("paper")
