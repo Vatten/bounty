@@ -17,6 +17,8 @@
 package dev.vatten.baserad.commands;
 
 import dev.vatten.baserad.*;
+import dev.vatten.baserad.interfaces.RenderableComponent;
+import dev.vatten.baserad.results.BountyResult;
 import net.kyori.adventure.text.Component;
 
 import java.util.ArrayList;
@@ -41,25 +43,49 @@ public class BountyCommand extends Command {
 //                                )
 //                        .build().asComponent());
 //            }
+            if(args[0].equalsIgnoreCase("reload")) {
+                plugin.getApi().reload();
+                player.sendMessage(TextFormatter.SUCCESS.format("Reloaded config files!"));
+            }
             if(args[0].equalsIgnoreCase("set")) {
                 player.sendMessage(TextFormatter.INFO.format(Component.text("Usage: /bounty set <player>")));
             }
-            if(args[0].equalsIgnoreCase("pending")) {
-                List<Bounty> pendingBounties = plugin.getBounties((bounty) -> bounty.getTarget().equals(player.getUuid()) && bounty.getStatus() == Bounty.Status.PENDING);
-                for(Bounty bounty : pendingBounties) {
-                    player.sendMessage(Component.text(bounty.getId()));
+            if(args[0].equalsIgnoreCase("list")) {
+//                List<Bounty> bounties = plugin.getBounties((bounty) -> bounty.getTarget().equals(player.getUuid()));
+                List<Bounty> bounties = plugin.getBounties((bounty) -> true);
+                RenderableComponent.MultiLineBuilder builder = RenderableComponent.multiLine().spacing(1);
+                for(Bounty bounty : bounties) {
+                    builder.addLine(plugin.getMessages().createBountyPreview(bounty));
                 }
+                player.sendMessage(builder.build().asComponent());
+            }
+            if(args[0].equalsIgnoreCase("pending")) {
+//                List<Bounty> pendingBounties = plugin.getBounties((bounty) -> bounty.getStatus() == Bounty.Status.PENDING && bounty.getTarget().equals(player.getUuid()));
+                List<Bounty> pendingBounties = plugin.getBounties((bounty) -> bounty.getStatus() == Bounty.Status.PENDING);
+                RenderableComponent.MultiLineBuilder builder = RenderableComponent.multiLine().spacing(1);
+                for(Bounty bounty : pendingBounties) {
+                    builder.addLine(plugin.getMessages().createBountyPreview(bounty));
+                }
+                player.sendMessage(builder.build().asComponent());
             }
         }
         if(args.length == 2) {
             if(args[0].equals("set")) {
                 BountyPlayer target = plugin.getBountyPlayerByName(args[1]);
                 if(target == null) {
-                    player.sendMessage(TextFormatter.INFO.format(Component.text("Player not found")));
+                    player.sendMessage(TextFormatter.SEVERE.format(Component.text("Failed to set bounty: Player doesn't exist or has never join this server")));
                     return;
                 }
-                plugin.setBounty(player.getUuid(), target.getUuid());
-                player.sendMessage(TextFormatter.INFO.format(Component.text("Bounty set on " + player.getName())));
+                BountyResult result = plugin.setBounty(player.getUuid(), target.getUuid());
+                if(result.wasSuccessful()) {
+                    player.sendMessage(TextFormatter.INFO.format(Component.text("Bounty set on " + player.getName())));
+                } else {
+                    player.sendMessage(TextFormatter.SEVERE.format(Component.text("Failed to set bounty: " + result.getReason())));
+                }
+            }
+            if(args[0].equalsIgnoreCase("view")) {
+                Bounty bounty = plugin.getBounty((b) -> b.getId().equals(args[1]));
+                player.sendMessage(plugin.getMessages().createBountyView(bounty));
             }
         }
     }
@@ -68,13 +94,13 @@ public class BountyCommand extends Command {
     public List<String> onTabComplete(VattenPlayer player, String[] args) {
         List<String> completions = new ArrayList<>();
         if(args.length <= 1) {
-            completions.addAll(List.of("set", "pending"));
+            completions.addAll(List.of("reload", "set", "list", "pending"));
         }
         if(args.length == 2) {
             if(args[0].equalsIgnoreCase("set")) {
                 completions.addAll(plugin.PLAYER_STORAGE.getData().getPlayers().stream().map(BountyPlayer::getName).toList());
             }
         }
-        return completions.stream().filter(s -> args.length == 0 || s.startsWith(args[args.length - 1].toLowerCase())).limit(50).toList();
+        return completions.stream().filter(s -> args.length == 0 || s.toLowerCase().startsWith(args[args.length - 1].toLowerCase())).limit(50).toList();
     }
 }

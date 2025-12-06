@@ -3,6 +3,7 @@ package dev.vatten.baserad;
 import de.exlll.configlib.Configuration;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import net.kyori.adventure.text.Component;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -24,6 +25,7 @@ public class Bounty {
 
     private UUID claimer;
     private Instant claimTime;
+    private Component deathMessage;
     private List<Item> rewardsToClaim;
 
     private List<UUID> hunters;
@@ -40,9 +42,10 @@ public class Bounty {
 
         this.claimer = null;
         this.claimTime = null;
+        this.deathMessage = null;
         this.rewardsToClaim = null;
 
-        this.hunters = new ArrayList<>();
+        this.hunters = null;
     }
 
     public void accept() {
@@ -54,11 +57,21 @@ public class Bounty {
         this.rewardsToClaim = List.copyOf(this.rewards);
     }
 
-    public void claim(UUID claimer) {
+    public void claim(UUID claimer, Component deathMessage) {
         this.status = Status.CLAIMED;
-        this.claimTime = Instant.now();
         this.claimer = claimer;
+        this.deathMessage = deathMessage.clickEvent(null).hoverEvent(null).insertion(null);
+        this.claimTime = Instant.now();
         this.rewardsToClaim = List.copyOf(this.rewards);
+    }
+
+    public void addHunter(UUID hunter) {
+        if(this.hunters == null) {
+            this.hunters = new ArrayList<>();
+            this.hunters.add(hunter);
+        } else if(!this.hunters.contains(hunter)) {
+            this.hunters.add(hunter);
+        }
     }
 
     public enum Status {

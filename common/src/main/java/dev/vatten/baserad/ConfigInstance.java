@@ -19,12 +19,15 @@ package dev.vatten.baserad;
 import de.exlll.configlib.YamlConfigurationProperties;
 import de.exlll.configlib.YamlConfigurationStore;
 import lombok.Getter;
+import net.kyori.adventure.text.Component;
 
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
 public class ConfigInstance<T> {
-    private static final YamlConfigurationProperties properties = YamlConfigurationProperties.newBuilder().build();
+    private static final YamlConfigurationProperties properties = YamlConfigurationProperties.newBuilder()
+            .addSerializer(Component.class, new ComponentSerializer())
+            .build();
 
     protected final VattenPlugin plugin;
     protected final String name;

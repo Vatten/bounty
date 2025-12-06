@@ -67,6 +67,7 @@ public class RenderableComponent implements Renderable {
 
     public static class MultiLineBuilder {
         private final List<Component> lines = new ArrayList<>();
+        private int spacing = 0;
 
         public MultiLineBuilder addLine(Component component) {
             this.lines.add(component);
@@ -80,12 +81,19 @@ public class RenderableComponent implements Renderable {
             return this;
         }
 
+        public MultiLineBuilder spacing(int spacing) {
+            this.spacing = spacing;
+            return this;
+        }
+
         public RenderableComponent build() {
             TextComponent.Builder componentBuilder = Component.text();
             for(int i = 0; i < lines.size(); i++) {
                 componentBuilder.append(lines.get(i));
                 if(i+1 < lines.size()) {
-                    componentBuilder = componentBuilder.appendNewline();
+                    for(int x = 0; x < spacing+1; x++) {
+                        componentBuilder = componentBuilder.appendNewline();
+                    }
                 }
             }
             return RenderableComponent.of(componentBuilder.build());

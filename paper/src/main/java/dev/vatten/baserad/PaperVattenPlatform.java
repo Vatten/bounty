@@ -17,6 +17,8 @@
 package dev.vatten.baserad;
 
 import dev.vatten.baserad.commands.Command;
+import dev.vatten.baserad.events.Event;
+import dev.vatten.baserad.events.PlayerKillPlayerEvent;
 import dev.vatten.baserad.events.PlayerLeaveEvent;
 import dev.vatten.baserad.events.PlayerLoadInEvent;
 import io.papermc.paper.command.brigadier.BasicCommand;
@@ -26,6 +28,8 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -46,6 +50,14 @@ public class PaperVattenPlatform extends JavaPlugin implements VattenPlatform<Pl
         );
 
         getServer().getPluginManager().registerEvents(this, this);
+
+        //TODO: Remove later
+        for(OfflinePlayer offlinePlayer : getServer().getOfflinePlayers()) {
+            if(((Plugin) plugin).getBountyPlayerByUUID(offlinePlayer.getUniqueId()) == null) {
+                ((Plugin) plugin).PLAYER_STORAGE.getData().getPlayers().add(new BountyPlayer(offlinePlayer.getUniqueId(), offlinePlayer.getName()));
+            }
+            ((Plugin) plugin).PLAYER_STORAGE.save();
+        }
 
 //        int pluginId = 27900;
 //        Metrics metrics = new Metrics(this, pluginId);
@@ -91,12 +103,6 @@ public class PaperVattenPlatform extends JavaPlugin implements VattenPlatform<Pl
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         plugin.getEventHandler().dispatchEvent(new dev.vatten.baserad.events.PlayerJoinEvent(wrapPlayer(event.getPlayer())));
-        for(OfflinePlayer offlinePlayer : getServer().getOfflinePlayers()) {
-            if(((Plugin) plugin).getBountyPlayerByUUID(offlinePlayer.getUniqueId()) == null) {
-                ((Plugin) plugin).PLAYER_STORAGE.getData().getPlayers().add(new BountyPlayer(offlinePlayer.getUniqueId(), offlinePlayer.getName()));
-            }
-            ((Plugin) plugin).PLAYER_STORAGE.save();
-        }
     }
 
     @EventHandler
@@ -107,5 +113,14 @@ public class PaperVattenPlatform extends JavaPlugin implements VattenPlatform<Pl
     @EventHandler
     public void onPlayerLoadedIn(PlayerClientLoadedWorldEvent event) {
         plugin.getEventHandler().dispatchEvent(new PlayerLoadInEvent(wrapPlayer(event.getPlayer())));
+    }
+
+    @EventHandler
+    public void onEntityDeath(PlayerDeathEvent event) {
+        if(event.getDamageSource().getCausingEntity() instanceof Player killer) {
+            PlayerKillPlayerEvent vattenEvent = new PlayerKillPlayerEvent(wrapPlayer(event.getPlayer()), wrapPlayer(killer), event.deathMessage());
+            plugin.getEventHandler().dispatchEvent(vattenEvent);
+            event.deathMessage(vattenEvent.getDeathMessage());
+        }
     }
 }

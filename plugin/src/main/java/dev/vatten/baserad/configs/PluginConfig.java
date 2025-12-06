@@ -16,9 +16,26 @@
 
 package dev.vatten.baserad.configs;
 
+import de.exlll.configlib.Comment;
 import de.exlll.configlib.Configuration;
+import lombok.Getter;
 
 @Configuration
 public class PluginConfig {
-    private String hello = "world";
+    @Getter
+    @Comment({
+            "Whether a player can set a bounty on themselves."
+    })
+    private boolean shouldSelfBounty = true;
+    @Getter
+    @Comment({
+            "Whether the bounty setter should be able to claim a bounty they set."
+    })
+    private boolean shouldSetterClaim = true;
+    // TODO: set all of these to false before publish
+    @Getter
+    @Comment({
+            "Whether the bounty target should be able to claim a bounty set on them."
+    })
+    private boolean shouldTargetClaim = true;
 }
