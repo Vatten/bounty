@@ -27,6 +27,7 @@ public class PluginConfig {
             "Whether a player can set a bounty on themselves."
     })
     private boolean shouldSelfBounty = true;
+
     @Getter
     @Comment({
             "Whether the bounty setter should be able to claim a bounty they set."
@@ -38,4 +39,10 @@ public class PluginConfig {
             "Whether the bounty target should be able to claim a bounty set on them."
     })
     private boolean shouldTargetClaim = true;
+
+    @Getter
+    @Comment({
+            "Above which threshold (number of hunters) a bounty is considered 'hot'."
+    })
+    private int hotBountyThreshold = 5;
 }

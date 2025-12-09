@@ -13,6 +13,7 @@ import net.kyori.adventure.text.event.ClickEvent;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -58,22 +59,37 @@ public class Plugin extends VattenPlugin {
         PLAYER_STORAGE.load();
     }
 
-    public BountyPlayer getBountyPlayerByName(String name) {
+    public List<BountyPlayer> getBountyPlayers(List<UUID> uuids) {
+        BountyPlayer[] playersArray = new BountyPlayer[uuids.size()];
         for(BountyPlayer player : PLAYER_STORAGE.getData().getPlayers()) {
-            if(player.getName().equals(name)) {
+            if(uuids.contains(player.getUuid())) {
+                playersArray[uuids.indexOf(player.getUuid())] = player;
+            }
+        }
+        List<BountyPlayer> players = new ArrayList<>();
+        for(BountyPlayer player : playersArray) {
+            if(player != null) {
+                players.add(player);
+            }
+        }
+        return players;
+    }
+
+    public BountyPlayer getBountyPlayer(Predicate<BountyPlayer> predicate) {
+        for(BountyPlayer player : PLAYER_STORAGE.getData().getPlayers()) {
+            if(predicate.test(player)) {
                 return player;
             }
         }
         return null;
     }
 
+    public BountyPlayer getBountyPlayerByName(String name) {
+        return getBountyPlayer(player -> player.getName().equalsIgnoreCase(name));
+    }
+
     public BountyPlayer getBountyPlayerByUUID(UUID uuid) {
-        for(BountyPlayer player : PLAYER_STORAGE.getData().getPlayers()) {
-            if(player.getUuid().equals(uuid)) {
-                return player;
-            }
-        }
-        return null;
+        return getBountyPlayer(player -> player.getUuid().equals(uuid));
     }
 
     public BountyResult setBounty(UUID setter, UUID target) {
@@ -81,8 +97,7 @@ public class Plugin extends VattenPlugin {
             return new BountyResult("You can't set a bounty on yourself");
         }
         Bounty bounty = new Bounty(setter, target, List.of(new Item("minecraft:stone", "[]", 67)));
-        BOUNTY_STORAGE.getData().getBounties().add(bounty);
-        BOUNTY_STORAGE.save();
+        BOUNTY_STORAGE.edit(bountyStorage -> bountyStorage.getBounties().add(bounty));
         VattenPlayer targetPlayer = getPlayer(target);
         if(targetPlayer != null) {
             targetPlayer.sendMessage(getMessages().createBountyReceivedMessage(bounty));
@@ -111,13 +126,12 @@ public class Plugin extends VattenPlugin {
 
     private void onJoin(PlayerJoinEvent event) {
         if(getBountyPlayerByUUID(event.getPlayer().getUuid()) == null) {
-            PLAYER_STORAGE.getData().getPlayers().add(new BountyPlayer(event.getPlayer().getUuid(), event.getPlayer().getName()));
-            PLAYER_STORAGE.save();
+            PLAYER_STORAGE.edit(playerStorage -> playerStorage.getPlayers().add(new BountyPlayer(event.getPlayer().getUuid(), event.getPlayer().getName())));
         }
         pluginInterface.scheduleTask(() -> {
             List<Bounty> bountyRequests = getBounties((bounty) -> bounty.getStatus() == Bounty.Status.PENDING && bounty.getTarget().equals(event.getPlayer().getUuid()));
             if(!bountyRequests.isEmpty()) {
-                event.getPlayer().sendMessage(Component.text("You have " + bountyRequests.size() + " bounties pending for your response. Click here to view them.").clickEvent(ClickEvent.runCommand("/bounty:bounty pending")));
+                event.getPlayer().sendMessage(getMessages().createPendingBountiesMessage(bountyRequests));
             }
         }, 5000);
     }

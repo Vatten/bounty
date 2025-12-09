@@ -74,6 +74,13 @@ public class Bounty {
         }
     }
 
+    public List<UUID> getHunters() {
+        if(this.hunters == null) {
+            return List.of();
+        }
+        return this.hunters;
+    }
+
     public enum Status {
         PENDING,
         ACCEPTED,

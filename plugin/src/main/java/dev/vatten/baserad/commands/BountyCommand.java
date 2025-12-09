@@ -22,6 +22,7 @@ import dev.vatten.baserad.results.BountyResult;
 import net.kyori.adventure.text.Component;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class BountyCommand extends Command {
@@ -50,23 +51,19 @@ public class BountyCommand extends Command {
             if(args[0].equalsIgnoreCase("set")) {
                 player.sendMessage(TextFormatter.INFO.format(Component.text("Usage: /bounty set <player>")));
             }
-            if(args[0].equalsIgnoreCase("list")) {
+            if(args[0].equalsIgnoreCase("top")) {
 //                List<Bounty> bounties = plugin.getBounties((bounty) -> bounty.getTarget().equals(player.getUuid()));
                 List<Bounty> bounties = plugin.getBounties((bounty) -> true);
-                RenderableComponent.MultiLineBuilder builder = RenderableComponent.multiLine().spacing(1);
-                for(Bounty bounty : bounties) {
-                    builder.addLine(plugin.getMessages().createBountyPreview(bounty));
-                }
-                player.sendMessage(builder.build().asComponent());
+                bounties.sort(Comparator.comparingInt(b -> -b.getHunters().size()));
+                player.sendMessage(plugin.getMessages().createBountyList(bounties, plugin.getMessages()::createBountyPreview));
+            }
+            if(args[0].equalsIgnoreCase("list")) {
+                List<Bounty> bounties = plugin.getBounties((bounty) -> bounty.getTarget().equals(player.getUuid()));
+                player.sendMessage(plugin.getMessages().createBountyList(bounties, plugin.getMessages()::createBountyPreview));
             }
             if(args[0].equalsIgnoreCase("pending")) {
-//                List<Bounty> pendingBounties = plugin.getBounties((bounty) -> bounty.getStatus() == Bounty.Status.PENDING && bounty.getTarget().equals(player.getUuid()));
-                List<Bounty> pendingBounties = plugin.getBounties((bounty) -> bounty.getStatus() == Bounty.Status.PENDING);
-                RenderableComponent.MultiLineBuilder builder = RenderableComponent.multiLine().spacing(1);
-                for(Bounty bounty : pendingBounties) {
-                    builder.addLine(plugin.getMessages().createBountyPreview(bounty));
-                }
-                player.sendMessage(builder.build().asComponent());
+                List<Bounty> pendingBounties = plugin.getBounties((bounty) -> bounty.getStatus() == Bounty.Status.PENDING && bounty.getTarget().equals(player.getUuid()));
+                player.sendMessage(plugin.getMessages().createBountyList(pendingBounties, plugin.getMessages()::createBountyPreview));
             }
         }
         if(args.length == 2) {
@@ -94,7 +91,7 @@ public class BountyCommand extends Command {
     public List<String> onTabComplete(VattenPlayer player, String[] args) {
         List<String> completions = new ArrayList<>();
         if(args.length <= 1) {
-            completions.addAll(List.of("reload", "set", "list", "pending"));
+            completions.addAll(List.of("reload", "set", "top", "list", "pending"));
         }
         if(args.length == 2) {
             if(args[0].equalsIgnoreCase("set")) {

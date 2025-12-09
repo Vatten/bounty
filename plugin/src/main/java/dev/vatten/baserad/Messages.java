@@ -2,6 +2,7 @@ package dev.vatten.baserad;
 
 import dev.vatten.baserad.interfaces.RenderableComponent;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -9,9 +10,11 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.function.Function;
 
 public class Messages {
@@ -22,8 +25,11 @@ public class Messages {
     public static Style SETTER_STYLE = Style.style(TextColor.color(0x99e9ff));
     public static Style CLAIMER_STYLE = Style.style(TextColor.color(0xfff266));
     public static Style WHITE_STYLE = Style.style(TextColor.color(0xf2f2f2));
+    public static Style FIRE_STYLE = Style.style(TextColor.color(0xFF7226));
+    public static Style LIGHT_FIRE_STYLE = Style.style(TextColor.color(0xFF9C66));
     public static Function<Bounty, ClickEvent> BOUNTY_VIEW_CLICKEVENT = (bounty) -> ClickEvent.runCommand("/bounty:bounty view " + bounty.getId());
     public static Function<Bounty, ClickEvent> BOUNTY_REWARDS_CLICKEVENT = (bounty) -> ClickEvent.runCommand("/bounty:bounty rewards " + bounty.getId());
+    public static ClickEvent PENDING_BOUNTIES_CLICKEVENT = ClickEvent.runCommand("/bounty:bounty pending");
     public static Component BOUNTY = Component.text("☠ Bounty™ ☠").color(TextColor.color(0xff4b1f));
     public static Component CLICK_TO_VIEW = Component.text("[ Click to view ]").style(PRIMARY_BUTTON_STYLE);
 
@@ -94,6 +100,13 @@ public class Messages {
         builder.addLine(Component.text("◆ Reward: ")
                 .append(Component.text("[ ⛏ Click to view ]").style(PRIMARY_BUTTON_STYLE).clickEvent(BOUNTY_REWARDS_CLICKEVENT.apply(bounty)))
         );
+        builder.addLine(Component.text()
+                .append(Component.text("◆ "))
+                .append(Component.text(bounty.getHunters().size(), FIRE_STYLE))
+                .append(Component.text(" players hunting this bounty: "))
+                .append(Component.text("[ ⚔ Hover to view ]").style(FIRE_STYLE).hoverEvent(HoverEvent.showText(createBountyHuntersComponent(bounty))))
+                .build().applyFallbackStyle(LIGHT_FIRE_STYLE)
+        );
 
         return builder.build().asComponent().applyFallbackStyle(DEFAULT_STYLE);
     }
@@ -101,11 +114,13 @@ public class Messages {
     public Component createBountyPreview(Bounty bounty) {
         RenderableComponent.FieldBuilder builder = RenderableComponent.field();
 
-        builder.addComponent(Component.text("◎ " + plugin.getBountyPlayerByUUID(bounty.getTarget()).getName()).style(TARGET_STYLE));
+        TextComponent.Builder textBuilder = Component.text();
+        textBuilder.append(Component.text("◎ " + plugin.getBountyPlayerByUUID(bounty.getTarget()).getName()).style(TARGET_STYLE));
 //        builder.addComponent(Component.text("⚑ " + plugin.getBountyPlayerByUUID(bounty.getSetter()).getName()).style(SETTER_STYLE));
         if(bounty.getStatus() == Bounty.Status.PENDING || bounty.getStatus() == Bounty.Status.REJECTED || bounty.getStatus() == Bounty.Status.ACCEPTED) {
-            builder.addComponent(formatBountyStatusIcon(bounty.getStatus()));
+            textBuilder.append(Component.text().append(Component.text("(", NamedTextColor.DARK_GRAY)).append(formatBountyStatusIcon(bounty.getStatus())).append(Component.text(")", NamedTextColor.DARK_GRAY)).build());
         }
+        builder.addComponent(textBuilder.build());
 
         RenderableComponent.FieldBuilder builder2 = RenderableComponent.field();
         Component component = builder.build().asComponent();
@@ -117,9 +132,30 @@ public class Messages {
         } else {
             builder2.addComponent(component);
         }
+        if(!bounty.getHunters().isEmpty()) {
+            if(bounty.getHunters().size() > plugin.PLUGIN_CONFIG.getData().getHotBountyThreshold()) {
+                builder2.addComponent(Component.text().append(Component.text("« \uD83D\uDD25 ", FIRE_STYLE)).append(Component.text(bounty.getHunters().size(), LIGHT_FIRE_STYLE)).append(Component.text(" »", FIRE_STYLE)).build());
+            } else {
+                builder2.addComponent(Component.text().append(Component.text("‹ ", FIRE_STYLE)).append(Component.text(bounty.getHunters().size(), LIGHT_FIRE_STYLE)).append(Component.text(" ›", FIRE_STYLE)).build());
+            }
+        }
         builder2.addComponent(CLICK_TO_VIEW);
 
         return builder2.build().asComponent().applyFallbackStyle(DEFAULT_STYLE).clickEvent(BOUNTY_VIEW_CLICKEVENT.apply(bounty));
+    }
+
+    public Component createBountyHuntersComponent(Bounty bounty) {
+        TextComponent.Builder builder = Component.text()
+                .append(Component.text("Players interested in hunting this bounty:"));
+        if(bounty.getHunters().isEmpty()) {
+            builder.appendNewline();
+            builder.append(Component.text("No players have expressed interest yet.").style(Style.style(NamedTextColor.GRAY)));
+        } else {
+            List<TextComponent> playerNames = plugin.getBountyPlayers(bounty.getHunters()).stream().map(bountyPlayer -> Component.text(bountyPlayer.getName())).toList();
+            builder.appendNewline();
+            builder.append(Component.join(JoinConfiguration.commas(true), playerNames).style(Style.style(NamedTextColor.GRAY)));
+        }
+        return builder.build().applyFallbackStyle(DEFAULT_STYLE);
     }
 
     public Component createBountyReceivedMessage(Bounty bounty) {
@@ -128,5 +164,21 @@ public class Messages {
                 .append(CLICK_TO_VIEW)
                 .clickEvent(BOUNTY_VIEW_CLICKEVENT.apply(bounty))
                 .build();
+    }
+
+    public Component createPendingBountiesMessage(List<Bounty> bountyRequests) {
+        return Component.text()
+                .append(Component.text("You have " + bountyRequests.size() + " pending bounty request(s) awaiting your answer. ").style(DEFAULT_STYLE))
+                .append(CLICK_TO_VIEW)
+                .clickEvent(PENDING_BOUNTIES_CLICKEVENT)
+                .build();
+    }
+
+    public Component createBountyList(List<Bounty> bounties, Function<Bounty, Component> bountyFormatter) {
+        RenderableComponent.MultiLineBuilder builder = RenderableComponent.multiLine().spacing(1);
+        for(Bounty bounty : bounties) {
+            builder.addLine(bountyFormatter.apply(bounty));
+        }
+        return builder.build().asComponent();
     }
 }
